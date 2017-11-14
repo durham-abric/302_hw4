@@ -7,6 +7,7 @@ type 'a rose_tree = Node of 'a * ('a rose_tree) list
 exception BackTrack
 exception NotFound
 
+(* Implemented with partial evaluation as 'p' to search tree *)
 let match_leaf (a : 'a)(b : 'a) : bool = (a=b);;
 
 (* Q1.1 write a function that finds an element of the tree using backtracking with exceptions *)
@@ -15,9 +16,7 @@ let rec find_e (p : 'a -> bool) (t : 'a rose_tree) : 'a = match t with
   |Node(leaf, h::t) -> if p leaf then leaf else try find_e p h with BackTrack -> find_e p (Node(leaf, t))
 
 (* Q1.1: write this function and it helper functions *)
-let find (p : 'a -> bool)  (t : 'a rose_tree) : 'a option = match t with
-  |Node(leaf, []) -> if p leaf then Some leaf else raise NotFound
-  |Node(leaf, h1::t) -> if p leaf then Some leaf else try Some (find_e p h1) with BackTrack -> Some (find_e p (Node(leaf, t)))
+let find (p : 'a -> bool)  (t : 'a rose_tree) : 'a option = try Some(find_e p t) with BackTrack -> None
 
 (* Q1.2 Find with failure continuations *)
 let rec find_k (p : 'a -> bool) (t : 'a rose_tree) (k : unit -> 'a option) : 'a option = assert false
@@ -44,9 +43,6 @@ let example = Node (7, [ Node (1, [Node(100, [])])
                          ])
 
 let is_big x =  x > 10
-
-let Some x = find (match_leaf 0) example;;
-print_int x;
 
 (* Q2 : Rational Numbers Two Ways *)
 
