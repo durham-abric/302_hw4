@@ -1,3 +1,4 @@
+open String
 (* Q1: A Rose by any Other Name Would Smell as Sweet *)
 
 type 'a rose_tree = Node of 'a * ('a rose_tree) list
@@ -5,7 +6,6 @@ type 'a rose_tree = Node of 'a * ('a rose_tree) list
 (* Find with exceptions *)
 
 exception BackTrack
-exception NotFound
 
 (* Implemented with partial evaluation as 'p' to search tree *)
 let match_leaf (a : 'a)(b : 'a) : bool = (a=b);;
@@ -100,10 +100,46 @@ end
 
 (* Q2.1: Implement the Arith module using rational numbers (t = fraction) *)
 
-(* module FractionArith : Arith = *)
-(* struct *)
-(*   ... *)
-(* end *)
+module FractionArith : Arith = 
+ struct
+  type t = fraction
+  let epsilon = (1,1000000)
+  let from_fraction (num, dem) = (num, dem)
+
+  let plus (f1: t) (f2: t) = match f1, f2 with
+    |(n1, d1), (n2, d2) -> ((n1*d2)+(n2*d1), d1*d2)
+
+  let minus f1 f2 = match f1, f2 with
+    |(n1, d1), (n2, d2) -> ((n1*d2)-(n2*d1), d1*d2)
+
+  let prod f1 f2 = match f1, f2 with
+    |(n1, d1), (n2, d2) -> (n1*n2, d1*d2)
+
+  let div f1 f2 = match f1, f2 with
+    |(n1, d1), (n2, d2) -> (n1*d2, d1*n2)
+
+  let abs f1 = match f1 with
+    |(n1, d1) -> (abs n1, abs d1)
+
+  let lt f1 f2 = match f1, f2 with
+    |(n1, d1), (n2, d2) -> n1/d1 < n2/d2
+
+  let le f1 f2 = match f1, f2 with
+    |(n1, d1), (n2, d2) -> n1/d1 <= n2/d2
+
+  let gt f1 f2 = match f1, f2 with
+    |(n1, d1), (n2, d2) -> n1/d1 > n2/d2
+
+  let ge f1 f2 = match f1, f2 with
+    |(n1, d1), (n2, d2) -> n1/d1 >= n2/d2
+
+  let eq f1 f2 = match f1, f2 with
+    |(n1, d1), (n2, d2) -> n1/d1 = n2/d2
+
+  let to_string x = match x with
+    |(n1, d1) -> (string_of_int n1) ^ "/" ^ (string_of_int d1)
+end
+  
 
 module type NewtonSolver =
   sig
