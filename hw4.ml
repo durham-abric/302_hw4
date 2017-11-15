@@ -100,13 +100,23 @@ end
 
 (* Q2.1: Implement the Arith module using rational numbers (t = fraction) *)
 
+(* A helper function that returns the Greatest Common Denominator of two numbers *)
+let rec gcd (u : int) (v : int) : int =
+  if v <> 0 then (gcd v (u mod v))
+  else (abs u)
+
+(* Useful function for reducing complex fractions *)
+let reduceFraction (f: fraction) : fraction = match f with
+  |(n, d) -> let div = gcd n d in (n/div, d/div)
+
 module FractionArith : Arith = 
  struct
+
   type t = fraction
   let epsilon = (1,1000000)
   let from_fraction (num, dem) = (num, dem)
 
-  let plus (f1: t) (f2: t) = match f1, f2 with
+  let plus f1 f2 = match f1, f2 with
     |(n1, d1), (n2, d2) -> ((n1*d2)+(n2*d1), d1*d2)
 
   let minus f1 f2 = match f1, f2 with
@@ -121,20 +131,20 @@ module FractionArith : Arith =
   let abs f1 = match f1 with
     |(n1, d1) -> (abs n1, abs d1)
 
-  let lt f1 f2 = match f1, f2 with
-    |(n1, d1), (n2, d2) -> n1/d1 < n2/d2
+  let lt f1 f2 = match (minus f1 f2) with
+    |(n1, d1) -> if ((n1>0 && d1<0) || (n1<0 && d1>0)) then true else false
 
-  let le f1 f2 = match f1, f2 with
-    |(n1, d1), (n2, d2) -> n1/d1 <= n2/d2
+  let le f1 f2 = match (minus f1 f2) with
+    |(n1, d1) -> if ((n1>0 && d1<0) || (n1<0 && d1>0) || (n1 = 0)) then true else false
 
-  let gt f1 f2 = match f1, f2 with
-    |(n1, d1), (n2, d2) -> n1/d1 > n2/d2
+  let gt f1 f2 = match (minus f1 f2) with
+    |(n1, d1) -> if ((n1>0 && d1>0) || (n1<0 && d1<0)) then true else false 
 
-  let ge f1 f2 = match f1, f2 with
-    |(n1, d1), (n2, d2) -> n1/d1 >= n2/d2
+  let ge f1 f2 = match (minus f1 f2) with
+    |(n1, d1) -> if ((n1>0 && d1>0) || (n1<0 && d1<0) || (n1 = 0)) then true else false
 
-  let eq f1 f2 = match f1, f2 with
-    |(n1, d1), (n2, d2) -> n1/d1 = n2/d2
+  let eq f1 f2 = match (minus f1 f2) with
+    |(n1, d1) -> if (n1 = 0) then true else false
 
   let to_string x = match x with
     |(n1, d1) -> (string_of_int n1) ^ "/" ^ (string_of_int d1)
@@ -150,18 +160,33 @@ module type NewtonSolver =
 
 (* Q2.2: Implement a function that approximates the square root using  the Newton-Raphson method *)
 
-(* module Newton (A : Arith) : (NewtonSolver with type t = A.t) = *)
-(*   struct *)
-(*     ... *)
-(*   end *)
+module Newton (A : Arith) : (NewtonSolver with type t = A.t) = 
+  struct 
+    type t = A.t
+
+    let square_root (num : t) = 
+      let rec findroot (root : t) (acc : t) : t = 
+        (*print_string (A.to_string root ^ "\n");*)
+        if (A.lt (A.abs(A.minus num (A.prod root root))) acc) then root
+        else let newRoot : t = A.div (A.plus (A.div num root) root) (A.from_fraction(2,1))
+             in findroot newRoot acc
+    in (findroot (A.from_fraction(1,1)) A.epsilon) (* Arbitrary starting point @ 1*)
+
+  end 
 
 (* Examples *)
 
-(* module FloatNewton = Newton (FloatArith) *)
-(* module RationalNewton = Newton (FractionArith) *)
+module FloatNewton = Newton (FloatArith) 
+module RationalNewton = Newton (FractionArith) 
 
-(* let sqrt2 = FloatNewton.square_root (FloatArith.from_fraction (2, 1)) *)
-(* let sqrt2_r = RationalNewton.square_root (FractionArith.from_fraction (2, 1)) *)
+let sqrt2 = FloatNewton.square_root (FloatArith.from_fraction (2, 1));;
+print_string(FloatArith.to_string sqrt2 ^ "\n");;
+let sqrt2_r = RationalNewton.square_root (FractionArith.from_fraction (2, 1));;
+print_string(FractionArith.to_string sqrt2_r ^ "\n");;
+
+(*let sqrt2_r2 = reduceFraction sqrt2_r*)
+
+
 
 (* Q3 : Real Real Numbers, for Real! *)
 
