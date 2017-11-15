@@ -82,7 +82,7 @@ module type Arith =
 module FloatArith : Arith =
 struct
   type t = float
-  let epsilon = epsilon_float
+  let epsilon = 0.0000001
   let from_fraction (num, den) = float_of_int num /. float_of_int den
 
   let plus = (+.)
@@ -113,7 +113,7 @@ module FractionArith : Arith =
  struct
 
   type t = fraction
-  let epsilon = (1,1000000)
+  let epsilon = (1,1000)
   let from_fraction (num, dem) = (num, dem)
 
   let plus f1 f2 = match f1, f2 with
