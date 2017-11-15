@@ -76,14 +76,16 @@ module type Arith =
     val ge : t -> t -> bool     (* >= *)
     val eq : t -> t -> bool     (* = *)
     val from_fraction : fraction -> t (* conversion from a fraction type *)
+    val reduce : t -> t
     val to_string : t -> string        (* generate a string *)
   end
 
 module FloatArith : Arith =
 struct
   type t = float
-  let epsilon = 0.0000001
+  let epsilon = 0.0000001 (* float_epsilon was causing infinite loop*)
   let from_fraction (num, den) = float_of_int num /. float_of_int den
+  let reduce (a : t) = a
 
   let plus = (+.)
   let minus = (-.)
@@ -113,8 +115,10 @@ module FractionArith : Arith =
  struct
 
   type t = fraction
-  let epsilon = (1,1000)
+  let epsilon = (1,1000000)
   let from_fraction (num, dem) = (num, dem)
+
+  let reduce = reduceFraction
 
   let plus f1 f2 = match f1, f2 with
     |(n1, d1), (n2, d2) -> ((n1*d2)+(n2*d1), d1*d2)
@@ -166,27 +170,23 @@ module Newton (A : Arith) : (NewtonSolver with type t = A.t) =
 
     let square_root (num : t) = 
       let rec findroot (root : t) (acc : t) : t = 
-        (*print_string (A.to_string root ^ "\n");*)
+        print_string(A.to_string root ^ "\n");
         if (A.lt (A.abs(A.minus num (A.prod root root))) acc) then root
         else let newRoot : t = A.div (A.plus (A.div num root) root) (A.from_fraction(2,1))
-             in findroot newRoot acc
-    in (findroot (A.from_fraction(1,1)) A.epsilon) (* Arbitrary starting point @ 1*)
+             in findroot (A.reduce newRoot) acc
+    in (findroot (A.from_fraction(5,1)) A.epsilon) (* Arbitrary starting point @ 5*)
 
   end 
 
-(* Examples *)
+(* Examples: *)
 
 module FloatNewton = Newton (FloatArith) 
 module RationalNewton = Newton (FractionArith) 
 
-let sqrt2 = FloatNewton.square_root (FloatArith.from_fraction (2, 1));;
+let sqrt2 = FloatNewton.square_root (FloatArith.from_fraction (10, 1));;
 print_string(FloatArith.to_string sqrt2 ^ "\n");;
-let sqrt2_r = RationalNewton.square_root (FractionArith.from_fraction (2, 1));;
+let sqrt2_r = RationalNewton.square_root (FractionArith.from_fraction (10, 1));;
 print_string(FractionArith.to_string sqrt2_r ^ "\n");;
-
-(*let sqrt2_r2 = reduceFraction sqrt2_r*)
-
-
 
 (* Q3 : Real Real Numbers, for Real! *)
 
