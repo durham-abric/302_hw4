@@ -9,43 +9,55 @@ exception NotFound
 
 (* Implemented with partial evaluation as 'p' to search tree *)
 let match_leaf (a : 'a)(b : 'a) : bool = (a=b);;
+let even_leaf (a: int) = ((a mod 2) = 0);;
 
 (* Q1.1 write a function that finds an element of the tree using backtracking with exceptions *)
 let rec find_e (p : 'a -> bool) (t : 'a rose_tree) : 'a = match t with 
   |Node(leaf, []) -> if p leaf then leaf else raise BackTrack 
-  |Node(leaf, h::t) -> if p leaf then leaf else try find_e p h with BackTrack -> find_e p (Node(leaf, t))
+  |Node(leaf, h::tail) -> if p leaf then leaf else try find_e p h with BackTrack -> find_e p (Node(leaf, tail))
 
 (* Q1.1: write this function and it helper functions *)
 let find (p : 'a -> bool)  (t : 'a rose_tree) : 'a option = try Some(find_e p t) with BackTrack -> None
 
 (* Q1.2 Find with failure continuations *)
-let rec find_k (p : 'a -> bool) (t : 'a rose_tree) (k : unit -> 'a option) : 'a option = assert false
+let rec find_k (p : 'a -> bool) (t : 'a rose_tree) (k : unit -> 'a option) : 'a option = match t with
+  |Node(leaf, []) -> if p leaf then Some leaf else k ()
+  |Node(leaf, h::tail) -> if p leaf then Some leaf else find_k p h (fun () -> find_k p (Node(leaf, tail)) k)
 
 (* Q1.2: write this function and it helper functions *)
-let find' (p : 'a -> bool)  (t : 'a rose_tree) : 'a option = assert false (*  call find_k with the appropriate inital continuation *)
+let find' (p : 'a -> bool)  (t : 'a rose_tree) : 'a option = find_k p t (fun () -> None) (*  call find_k with the appropriate inital continuation *)
 
 (* Find all with continuations *)
-
-let rec find_all_k  (p : 'a -> bool) (t : 'a rose_tree) (k : 'a list -> 'b) : 'b =
-  assert false
+let rec find_all_k  (p : 'a -> bool) (t : 'a rose_tree) (k : 'a list -> 'b) : 'b = 
+  let rec find_all_k_acc (p : 'a -> bool) (t : 'a rose_tree) (l: 'a list) (k : 'a list -> 'b) = match t with
+    |Node(leaf, []) -> if p leaf then k (leaf::l) else k l
+    |Node(leaf, h::tail) -> if p leaf then find_all_k_acc p h (leaf::l) (fun a -> find_all_k_acc p (Node(leaf, tail)) a k)
+                            else find_all_k_acc p h l (fun a -> find_all_k_acc p (Node(leaf, tail)) a k)
+  in find_all_k_acc p t [] k
 
 (* Q1.3: write this function and it helper functions *)
-let find_all p t = assert false
+let find_all p t = find_all_k p t (fun a -> a)
 
 (* An example to use *)
 
 let example = Node (7, [ Node (1, [Node(100, [])])
-                         ; Node (2, [Node (16, [Node(71, [])])])
-                         ; Node (4, [])
+                         ; Node (2, [Node (71, [ Node(71, []); Node(50, [])])])
+                         ; Node (71, [])
                          ; Node (9, [])
                          ; Node (11, [Node(43, [])])
-                         ; Node (15, [])
+                         ; Node (71, [])
                          ])
 
 let is_big x =  x > 10
 
-(* Q2 : Rational Numbers Two Ways *)
+let x: int option = find' (match_leaf 43) example;;
+let y: int option = find' (match_leaf 7) example;;
+let z: int option = find' (match_leaf 1000000) example;;
 
+let a: int list = find_all even_leaf example;;
+let b: int list = find_all (match_leaf 71) example;;
+
+(* Q2 : Rational Numbers Two Ways *)
 type fraction = int * int
 
 module type Arith =
