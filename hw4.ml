@@ -210,10 +210,12 @@ let rec take n z =
   else z.head::(take (n-1) (z.tail()))
 
 (* Q3.1: implement the function q as explained in the pdf *)
-let rec q z n = assert false
+let rec q z n = if n = 0 then 1
+                else if n = 1 then nth z 1
+                else q z (n-2) + ((nth z n) * (q z (n-1)))
 
 (* Q3.2: implement the function r as in the notes *)
-let rec r z n = assert false
+let rec r z n = nth z 0  
 
 (* Q3.3: implement the error function *)
 let error z n = assert false
