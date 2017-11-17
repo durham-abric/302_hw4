@@ -170,7 +170,6 @@ module Newton (A : Arith) : (NewtonSolver with type t = A.t) =
 
     let square_root (num : t) = 
       let rec findroot (root : t) (acc : t) : t = 
-        print_string(A.to_string root ^ "\n");
         if (A.lt (A.abs(A.minus num (A.prod root root))) acc) then root
         else let newRoot : t = A.div (A.plus (A.div num root) root) (A.from_fraction(2,1))
              in findroot (A.reduce newRoot) acc
@@ -180,13 +179,15 @@ module Newton (A : Arith) : (NewtonSolver with type t = A.t) =
 
 (* Examples: *)
 
+
 module FloatNewton = Newton (FloatArith) 
 module RationalNewton = Newton (FractionArith) 
 
-let sqrt2 = FloatNewton.square_root (FloatArith.from_fraction (10, 1));;
+let sqrt2 = FloatNewton.square_root (FloatArith.from_fraction (2, 1));;
 print_string(FloatArith.to_string sqrt2 ^ "\n");;
-let sqrt2_r = RationalNewton.square_root (FractionArith.from_fraction (10, 1));;
+let sqrt2_r = RationalNewton.square_root (FractionArith.from_fraction (2, 1));;
 print_string(FractionArith.to_string sqrt2_r ^ "\n");;
+
 
 (* Q3 : Real Real Numbers, for Real! *)
 
@@ -209,41 +210,92 @@ let rec take n z =
   if n = 1 then [z.head]
   else z.head::(take (n-1) (z.tail()))
 
+(* Helper function that trims a list to the first "x" elements *)
+let rec trimList x list = match List.rev list with
+| [] -> list
+| h::t -> if (List.length list > x) then trimList x (List.rev t)
+          else list
+
+(* helper function to memoize function: q instead of repeated calculation *)
+let memo_many (x:int) (f : 'a -> 'b) : 'a -> 'b = 
+  let memo = ref [] in
+  let rec checkMemo prev current = match prev with
+    | (a,b)::_ when a = current -> b
+    | _::prev -> checkMemo prev current 
+    | [] -> let newVal = f current in memo := (current, newVal)::(trimList (x-1) !memo); newVal
+  in (fun y -> checkMemo !memo y)
+
 (* Q3.1: implement the function q as explained in the pdf *)
-let rec q z n = if n = 0 then 1
-                else if n = 1 then nth z 1
-                else q z (n-2) + ((nth z n) * (q z (n-1)))
+(* NOTE: I added memoization *)
+let rec q' z n = match n with
+| 0 -> 1
+| 1 -> nth z 1
+| _ -> q' z (n-2) + ((nth z n) * (q' z (n-1))) 
+          
+let rec q z n =  (memo_many 100 q') z n
 
 (* Q3.2: implement the function r as in the notes *)
-let rec r z n = nth z 0  
+let rec r z n =  match n with
+  | 0 -> float_of_int(nth z 0)
+  | _ ->  let qn1 = (q z (n-1)) in let qn = (q z n) in 
+            if (qn1 == 0 || qn == 0) then r z (n-1)
+            else ((-1.0 ** float_of_int(n-1)) /. float_of_int(qn*qn1)) +. r z (n-1) 
 
 (* Q3.3: implement the error function *)
-let error z n = assert false
+let error z n = if (q z n) != 0 && q z (n-1) != 0 then 1.0 /. float_of_int( (q z n)*((q z n)*(q z (n-1)))) 
+                else 0.0 (* Cannot calculate error *)
 
 (* Q3.4: implement a function that computes a rational approximation of a real number *)
-let rat_of_real z approx = assert false
+let rat_of_real z approx = 
+  let rec rat_of_real_count z' approx' count =
+    if (error z' count > approx') then r z' count
+    else rat_of_real_count z' approx' (count+1)
+  in rat_of_real_count z approx 0
 
 let real_of_int n = { head = n ; tail = fun () -> constant 0}
 
 (* Q3.5: implement a function that computes the real representation of a rational number   *)
-let rec real_of_rat r = assert false
+let rec real_of_rat r = let h = floor r in let diff = r -. h
+      in match diff with
+        | 0. -> {head = int_of_float(h); tail = fun () -> constant 0}
+        | _ -> {head = int_of_float(h); tail = fun () -> real_of_rat (1.0 /. diff)}
 
+let out2 :float = (r sqrt2 2);;
+let error2 : float = error sqrt2 2;;
+print_float(out2);; print_string("\n");;
+print_float(error2);; print_string("\n");;
 
-(* Examples *)
+let out4 :float = (r sqrt2 4);;
+let error4 : float = error sqrt2 4;;
+print_float(out4);; print_string("\n");;
+print_float(error4);; print_string("\n");;
+
+let out10 :float = (r sqrt2 10);;
+let error10 : float = error sqrt2 10;;
+print_float(out10);; print_string("\n");;
+print_float(error10);; print_string("\n");; 
+
+let out20 :float = (r sqrt2 20);;
+let error20 : float = error sqrt2 20;;
+print_float(out20);; print_string("\n");;
+print_float(error20);; print_string("\n");; 
+
+(* Examples 
 
 (* Approximations of the  irrational numbers we have *)
 
-(* let sqrt_2_rat = rat_of_real sqrt2 1.e-5 *)
-(* let golden_ratio_rat = rat_of_real golden_ratio 1.e-5 *)
+let sqrt_2_rat = rat_of_real sqrt2 0.0001 
+let golden_ratio_rat = rat_of_real golden_ratio 0.0001 
 
 (* To test the representation of rationals we can try this *)
-(* let to_real_and_back n = rat_of_real (real_of_rat n) 0.0001 *)
+let to_real_and_back n = rat_of_real (real_of_rat n) 0.0001 
 
 (* e1 should be very close to 10 (it is exactly 10 in the model solution) *)
-(* let e1 = to_real_and_back 10.0 *)
+let e1 = to_real_and_back 10.0 
 
 (* this is the float approximation of pi, not the real number pi *)
-(* let not_pi = 2. *. acos 0. *)
+let not_pi = 2. *. acos 0. 
 
 (* This should share the same 4 decimals with not_pi *)
-(* let not_pi' = to_real_and_back not_pi *)
+let not_pi' = to_real_and_back not_pi
+*)
